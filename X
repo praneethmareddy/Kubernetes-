@@ -1,1 +1,36 @@
-https://www.linkedin.com/posts/saifeezibrahim_kubernetes-activity-7368610467616911360-ViIG?utm_source=share&utm_medium=member_android&rcm=ACoAADzxoFQBrkTfZBf8Y8VABzTUIXc_ZDQdD5s
+[KuruvaMaddileti (maddi)] 09-16-2025 15:58
+write script to take a backup of all these files  and direc
+/etc/nova/
+/etc/neutron/
+/etc/glance/
+/etc/cinder/
+/etc/keystone/
+/etc/pacemaker/
+/etc/heat/
+/etc/rabbitmq/
+/etc/keepalived/
+/etc/aodh/
+/etc/ceilometer/
+/etc/openstack-dashboard/
+/etc/corosync/
+
+/etc/sysconfig/network-scripts/
+
+
+/var/lib/nova/
+/var/lib/neutron/
+/var/lib/cinder/
+/var/lib/keystone/
+/var/lib/pacemaker/
+/var/lib/heat/
+/var/lib/rabbitmq/
+/var/lib/aodh/
+/var/lib/ceilometer/
+/var/lib/glance/
+/var/lib/openstack-dashboard/
+/var/lib/corosync/
+
+the below commands output 
+
+openstack-service status
+df -hT
