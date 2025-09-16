@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# --- Configuration ---
+# Set the directory where backups will be stored
+BACKUP_DIR="/root/openstack_backups"
+
+# --- Script ---
+
+# Ensure the script is run as root
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run this script as root or with sudo."
+  exit 1
+fi
+
+# Define file names
+HOSTNAME=$(hostname -s)
+TIMESTAMP=$(date +'%Y-%m-%d_%H%M%S')
+BACKUP_FILENAME="${HOSTNAME}_openstack_config_${TIMESTAMP}.tar.gz"
+DEST_FILE="${BACKUP_DIR}/${BACKUP_FILENAME}"
+STATUS_LOG_NAME="${HOSTNAME}_openstack_status_${TIMESTAMP}.log"
+STATUS_LOG_FILE="/tmp/${STATUS_LOG_NAME}" # Temp location
+
+# Create backup directory if it doesn't exist
+mkdir -p "$BACKUP_DIR"
+if [ $? -ne 0 ]; then
+    echo "Error: Could not create backup directory: $BACKUP_DIR"
+    exit 1
+fi
+
+echo "Starting OpenStack backup for $HOSTNAME..."
+echo "Backup file will be: $DEST_FILE"
+echo "------------------------------------------------"
+
+# --- 1. Capture Command Outputs ---
+echo "Capturing service status and disk usage..."
+
+# Create a temporary log file to store command outputs
+(
+    echo "=================================================="
+    echo "OpenStack Service Status (openstack-service status)"
+    echo "=================================================="
+    openstack-service status
+    echo ""
+    echo "=================================================="
+    echo "Filesystem Usage (df -hT)"
+    echo "=================================================="
+    df -hT
+) > "$STATUS_LOG_FILE"
+
+if [ $? -ne 0 ]; then
+    echo "Warning: 'openstack-service status' command may have failed. Continuing..."
+fi
+
+# --- 2. Define Directories to Backup ---
+# List all directories provided in the prompt
+DIRECTORIES_TO_BACKUP=(
+    /etc/nova/
+    /etc/neutron/
+    /etc/glance/
+    /etc/cinder/
+    /etc/keystone/
+    /etc/pacemaker/
+    /etc/heat/
+    /etc/rabbitmq/
+    /etc/keepalived/
+    /etc/aodh/
+    /etc/ceilometer/
+    /etc/openstack-dashboard/
+    /etc/corosync/
+    /etc/sysconfig/network-scripts/
+    /var/lib/nova/
+    /var/lib/neutron/
+    /var/lib/cinder/
+    /var/lib/keystone/
+    /var/lib/pacemaker/
+    /var/lib/heat/
+    /var/lib/rabbitmq/
+    /var/lib/aodh/
+    /var/lib/ceilometer/
+    /var/lib/glance/
+    /var/lib/openstack-dashboard/
+    /var/lib/corosync/
+)
+
+# --- 3. Create the Archive ---
+echo "Creating compressed tar archive..."
+
+# We use 'tar' to create a compressed archive.
+# -c: Create
+# -z: Compress with gzip
+# -v: Verbose (show files being added)
+# -f: Specify output file
+# --ignore-failed-read: Prevents tar from stopping if a file is unreadable or deleted mid-backup
+# We change directory (-C) to /tmp to add the log file with a clean path
+# We change directory (-C) to / to add all system paths from root
+
+tar -czvf "$DEST_FILE" \
+    --ignore-failed-read \
+    -C /tmp "$STATUS_LOG_NAME" \
+    -C / "${DIRECTORIES_TO_BACKUP[@]}"
+
+# --- 4. Finalize and Clean Up ---
+if [ $? -eq 0 ]; then
+    echo "------------------------------------------------"
+    echo "✅ Backup successful!"
+    echo "Archive created at: $DEST_FILE"
+    
+    # List contents for verification (optional, can be commented out)
+    echo "Archive contents (top level):"
+    tar -tzf "$DEST_FILE" --exclude '*/*'
+else
+    echo "------------------------------------------------"
+    echo "❌ Backup FAILED!"
+    echo "An error occurred during the tar process."
+    # Remove the partial/failed backup file
+    rm -f "$DEST_FILE"
+fi
+
+# Clean up the temporary status log file
+rm -f "$STATUS_LOG_FILE"
+
+echo "Backup script finished."
