@@ -1,5 +1,11 @@
-[KuruvaMaddileti (maddi)] 09-16-2025 15:58
-write script to take a backup of all these files  and direc
+#!/bin/bash
+
+# Backup script for OpenStack configuration and data
+# Author: Praneeth
+# Date: $(date +%Y-%m-%d)
+
+# Directories to backup
+DIRS=(
 /etc/nova/
 /etc/neutron/
 /etc/glance/
@@ -13,10 +19,7 @@ write script to take a backup of all these files  and direc
 /etc/ceilometer/
 /etc/openstack-dashboard/
 /etc/corosync/
-
 /etc/sysconfig/network-scripts/
-
-
 /var/lib/nova/
 /var/lib/neutron/
 /var/lib/cinder/
@@ -29,8 +32,30 @@ write script to take a backup of all these files  and direc
 /var/lib/glance/
 /var/lib/openstack-dashboard/
 /var/lib/corosync/
+)
 
-the below commands output 
+# Backup location
+BACKUP_DIR="/backup"
+TIMESTAMP=$(date +%F_%H-%M-%S)
+BACKUP_FILE="$BACKUP_DIR/openstack_backup_$TIMESTAMP.tar.gz"
 
-openstack-service status
-df -hT
+# Make sure backup dir exists
+mkdir -p "$BACKUP_DIR"
+
+# Create a temp folder for command outputs
+TMP_DIR=$(mktemp -d)
+echo "Collecting command outputs..."
+
+# Save command outputs
+openstack-service status > "$TMP_DIR/openstack-service-status.txt" 2>&1
+df -hT > "$TMP_DIR/df-hT.txt" 2>&1
+
+# Tar everything
+echo "Creating backup archive..."
+tar -czf "$BACKUP_FILE" "${DIRS[@]}" "$TMP_DIR"
+
+# Cleanup
+rm -rf "$TMP_DIR"
+
+echo "Backup completed successfully!"
+echo "File saved at: $BACKUP_FILE"
